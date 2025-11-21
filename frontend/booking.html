@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Book a Taxi</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <script src="https://cdn.tailwindcss.com"></script>
+    </head>
+
+    <body class="bg-gray-100 min-h-screen">
+        <!-- NAVBAR -->
+        <nav
+            class="bg-blue-600 p-4 text-white flex flex-col sm:flex-row sm:justify-between gap-3 sm:gap-0 items-center"
+        >
+            <h1 class="text-2xl font-bold">Taxi Management</h1>
+            <button
+                id="logoutBtn"
+                class="bg-red-500 px-5 py-2 rounded-lg hover:bg-red-600 w-full sm:w-auto"
+            >
+                Logout
+            </button>
+        </nav>
+
+        <!-- MAIN CONTENT WRAPPER -->
+        <div class="max-w-4xl mx-auto mt-8 px-4 sm:px-0">
+            <!-- USER INFO -->
+            <div class="bg-white p-6 rounded-xl shadow mb-6">
+                <h2 class="text-xl sm:text-2xl font-semibold mb-4">Welcome</h2>
+                <p id="userInfo" class="text-gray-700 text-sm sm:text-base">
+                    Loading user info...
+                </p>
+            </div>
+
+            <!-- BOOKING FORM -->
+            <div class="bg-white p-6 rounded-xl shadow mb-6">
+                <h2 class="text-xl sm:text-2xl font-semibold mb-4">
+                    Create a Booking
+                </h2>
+
+                <form id="bookingForm" class="space-y-4">
+                    <div>
+                        <label class="font-medium">Pickup Location</label>
+                        <input
+                            id="source"
+                            class="w-full p-3 border rounded-lg text-sm sm:text-base"
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label class="font-medium">Dropoff Location</label>
+                        <input
+                            id="destination"
+                            class="w-full p-3 border rounded-lg text-sm sm:text-base"
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label class="font-medium">Distance (km)</label>
+                        <input
+                            type="number"
+                            id="distance"
+                            class="w-full p-3 border rounded-lg text-sm sm:text-base"
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label class="font-medium">Select Taxi</label>
+                        <select
+                            id="taxiSelect"
+                            class="w-full p-3 border rounded-lg text-sm sm:text-base"
+                        ></select>
+                    </div>
+
+                    <button
+                        class="bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 w-full text-sm sm:text-base"
+                    >
+                        Book Taxi
+                    </button>
+                </form>
+            </div>
+
+            <!-- BOOKINGS LIST -->
+            <div class="bg-white p-6 rounded-xl shadow">
+                <h2 class="text-xl sm:text-2xl font-semibold mb-4">
+                    Your Bookings
+                </h2>
+                <div
+                    id="bookingList"
+                    class="space-y-3 text-gray-700 text-sm sm:text-base"
+                >
+                    Loading bookings...
+                </div>
+            </div>
+        </div>
+
+        <!-- RECEIPT POPUP -->
+        <div
+            id="ticketModal"
+            class="fixed inset-0 bg-black/40 hidden items-center justify-center p-4"
+        >
+            <div
+                class="bg-white w-full max-w-sm sm:max-w-md rounded-xl p-6 shadow-xl"
+            >
+                <h2 class="text-xl font-bold mb-4 text-center">
+                    Booking Receipt
+                </h2>
+
+                <div
+                    id="ticketContent"
+                    class="space-y-2 text-gray-700 text-sm sm:text-base"
+                ></div>
+
+                <div class="flex flex-col sm:flex-row justify-end gap-3 mt-6">
+                    <button
+                        onclick="printTicket()"
+                        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 w-full sm:w-auto"
+                    >
+                        Print
+                    </button>
+
+                    <button
+                        onclick="closeTicket()"
+                        class="bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500 w-full sm:w-auto"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCRIPT -->
+        <script>
+            const API = "http://localhost:8000";
+            const token = localStorage.getItem("token");
+
+            // LOGOUT
+            document
+                .getElementById("logoutBtn")
+                .addEventListener("click", () => {
+                    localStorage.removeItem("token");
+                    window.location.href = "login.html";
+                });
+
+            async function loadUser() {
+                const res = await fetch(`${API}/auth/me`, {
+                    headers: { token },
+                });
+                if (!res.ok) {
+                    document.getElementById("userInfo").innerText =
+                        "Invalid session";
+                    return;
+                }
+                const user = await res.json();
+                document.getElementById("userInfo").innerHTML =
+                    `User: <b>${user.name}</b> (ID: ${user.customer_id})`;
+                window.USER_ID = user.customer_id;
+            }
+
+            async function loadTaxis() {
+                const res = await fetch(`${API}/taxi/all`);
+                const taxis = await res.json();
+
+                const select = document.getElementById("taxiSelect");
+                select.innerHTML = "";
+                taxis.forEach((t) => {
+                    const opt = document.createElement("option");
+                    opt.value = t.taxi_id;
+                    opt.textContent = `${t.model} (Cap: ${t.capacity})`;
+                    select.appendChild(opt);
+                });
+            }
+
+            async function loadBookings() {
+                const res = await fetch(`${API}/booking/user/me`, {
+                    headers: { token },
+                });
+                const bookings = await res.json();
+                const container = document.getElementById("bookingList");
+
+                if (!bookings.length) {
+                    container.innerHTML = "No bookings found.";
+                    return;
+                }
+
+                container.innerHTML = bookings
+                    .map(
+                        (b) => `
+                        <div class="p-4 bg-gray-100 rounded-lg">
+                            <p><b>Booking ID:</b> ${b.booking_id}</p>
+                            <p><b>From:</b> ${b.source}</p>
+                            <p><b>To:</b> ${b.destination}</p>
+                            <p><b>Fare:</b> ₹${b.fare}</p>
+                            <p><b>Status:</b> ${b.payment_status}</p>
+                        </div>
+                    `,
+                    )
+                    .join("");
+            }
+
+            // BOOKING CREATION
+            document
+                .getElementById("bookingForm")
+                .addEventListener("submit", async (e) => {
+                    e.preventDefault();
+
+                    const pickup = document
+                        .getElementById("source")
+                        .value.trim();
+                    const drop = document
+                        .getElementById("destination")
+                        .value.trim();
+                    const distance = Number(
+                        document.getElementById("distance").value,
+                    );
+
+                    if (pickup.toLowerCase() === drop.toLowerCase()) {
+                        alert("Pickup and Dropoff cannot be the same.");
+                        return;
+                    }
+
+                    if (distance > 200) {
+                        alert("Max allowed distance is 200 km.");
+                        return;
+                    }
+
+                    const payload = {
+                        taxi_id: document.getElementById("taxiSelect").value,
+                        source: pickup,
+                        destination: drop,
+                        distance_km: distance,
+                    };
+
+                    const res = await fetch(`${API}/booking/create`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", token },
+                        body: JSON.stringify(payload),
+                    });
+
+                    const data = await res.json();
+                    showTicketPopup(data);
+                    loadBookings();
+                });
+
+            function showTicketPopup(data) {
+                document.getElementById("ticketContent").innerHTML = `
+                    <p><b>Fare:</b> ₹${data.fare}</p>
+                    <p><b>Driver Name:</b> ${data.driver_name}</p>
+                    <p><b>Driver Phone:</b> ${data.driver_phone}</p>
+                    <p><b>Date:</b> ${new Date().toLocaleString()}</p>
+                `;
+                document
+                    .getElementById("ticketModal")
+                    .classList.remove("hidden");
+                document.getElementById("ticketModal").classList.add("flex");
+            }
+
+            function closeTicket() {
+                document.getElementById("ticketModal").classList.add("hidden");
+            }
+
+            function printTicket() {
+                const content =
+                    document.getElementById("ticketContent").innerHTML;
+                const printWindow = window.open("", "", "width=600,height=400");
+                printWindow.document.write(content);
+                printWindow.print();
+                printWindow.close();
+            }
+
+            (async () => {
+                await loadUser();
+                await loadTaxis();
+                await loadBookings();
+            })();
+        </script>
+    </body>
+</html>

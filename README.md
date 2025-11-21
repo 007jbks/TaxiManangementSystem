@@ -76,7 +76,6 @@ Drivers are assigned taxis, and their details and expenses are tracked.
 #### **Functional Requirements**
 - **FR5:** System shall allow adding a new driver.
 - **FR6:** System shall allow assigning a taxi to a driver.
-- **FR7:** System shall track daily driver expenses.
 - **FR8:** System shall display driver–taxi mapping.
 
 ---
@@ -129,9 +128,7 @@ Payments from customers are recorded for each booking.
 ### **Tables**
 - **Taxi(taxi_id, model, capacity, status)**  
 - **Driver(driver_id, name, phone, taxi_id)**  
-- **Expenses(expense_id, driver_id, date, amount)**  
 - **Booking(booking_id, customer_name, source, destination, taxi_id, date, fare)**  
-- **Payment(payment_id, booking_id, amount, date)**  
 
 ---
 

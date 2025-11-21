@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Admin Dashboard</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+    </head>
+
+    <body class="bg-gray-200 min-h-screen p-10">
+        <div class="max-w-6xl mx-auto bg-white p-8 rounded-xl shadow">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold">Admin Dashboard</h2>
+                <button
+                    id="logoutBtn"
+                    class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600"
+                >
+                    Logout
+                </button>
+            </div>
+
+            <!-- MAIN BUTTON GRID -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                <!-- VIEW TAXIS -->
+                <button
+                    onclick="loadTaxis()"
+                    class="bg-blue-600 text-white p-6 rounded-xl text-xl font-semibold hover:bg-blue-700"
+                >
+                    View All Taxis
+                </button>
+
+                <!-- VIEW DRIVERS -->
+                <button
+                    onclick="loadDrivers()"
+                    class="bg-green-600 text-white p-6 rounded-xl text-xl font-semibold hover:bg-green-700"
+                >
+                    View All Drivers
+                </button>
+
+                <!-- VIEW COMPLETED BOOKINGS -->
+                <button
+                    onclick="loadBookings()"
+                    class="bg-purple-600 text-white p-6 rounded-xl text-xl font-semibold hover:bg-purple-700"
+                >
+                    Completed / Paid Bookings
+                </button>
+            </div>
+
+            <!-- LINKS to MANAGEMENT PAGES -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <a
+                    href="taxiadmin.html"
+                    class="bg-blue-500 text-white p-5 rounded-xl text-center text-xl font-semibold hover:bg-blue-600 block"
+                >
+                    Add / Update / Delete Taxis
+                </a>
+
+                <a
+                    href="driveradmin.html"
+                    class="bg-green-500 text-white p-5 rounded-xl text-center text-xl font-semibold hover:bg-green-600 block"
+                >
+                    Add / Update / Delete Drivers
+                </a>
+            </div>
+
+            <!-- Dynamic Panel -->
+            <div id="panelContainer" class="mt-10"></div>
+        </div>
+
+        <script>
+            const API = "http://localhost:8000";
+            const token = localStorage.getItem("admin_token");
+            const panelContainer = document.getElementById("panelContainer");
+
+            if (!token) window.location.href = "admin_login.html";
+
+            document.getElementById("logoutBtn").onclick = () => {
+                localStorage.removeItem("admin_token");
+                window.location.href = "admin_login.html";
+            };
+
+            async function fetchJSON(url) {
+                const res = await fetch(url, { headers: { token } });
+                return res.json();
+            }
+
+            async function loadTaxis() {
+                const taxis = await fetchJSON(`${API}/admin/taxi/all`);
+                panelContainer.innerHTML = `
+                <h3 class="text-3xl font-bold mb-6">All Taxis</h3>
+                <div class="space-y-4">
+                    ${taxis
+                        .map(
+                            (t) => `
+                        <div class="p-5 bg-gray-100 rounded-xl shadow">
+                            <p><b>ID:</b> ${t.taxi_id}</p>
+                            <p><b>Model:</b> ${t.model}</p>
+                            <p><b>Capacity:</b> ${t.capacity}</p>
+                            <p><b>Status:</b> ${t.status}</p>
+                        </div>
+                    `,
+                        )
+                        .join("")}
+                </div>
+            `;
+            }
+
+            async function loadDrivers() {
+                const drivers = await fetchJSON(`${API}/admin/driver/all`);
+                panelContainer.innerHTML = `
+                <h3 class="text-3xl font-bold mb-6">All Drivers</h3>
+                <div class="space-y-4">
+                    ${drivers
+                        .map(
+                            (d) => `
+                        <div class="p-5 bg-gray-100 rounded-xl shadow">
+                            <p><b>ID:</b> ${d.driver_id}</p>
+                            <p><b>Name:</b> ${d.name}</p>
+                            <p><b>Phone:</b> ${d.phone}</p>
+                            <p><b>Taxi ID:</b> ${d.taxi_id}</p>
+                            <p><b>Taxi Model:</b> ${d.taxi_model || "Unassigned"}</p>
+                        </div>
+                    `,
+                        )
+                        .join("")}
+                </div>
+            `;
+            }
+
+            async function loadBookings() {
+                const bookings = await fetchJSON(
+                    `${API}/admin/bookings/completed`,
+                );
+                panelContainer.innerHTML = `
+                <h3 class="text-3xl font-bold mb-6">Completed / Paid Bookings</h3>
+                <div class="space-y-4">
+                    ${bookings
+                        .map(
+                            (b) => `
+                        <div class="p-5 bg-gray-100 rounded-xl shadow">
+                            <p><b>Booking ID:</b> ${b.booking_id}</p>
+                            <p><b>From:</b> ${b.source}</p>
+                            <p><b>To:</b> ${b.destination}</p>
+                            <p><b>Date:</b> ${new Date(b.date).toLocaleString()}</p>
+                            <p><b>Fare:</b> ₹${b.fare}</p>
+                            <p><b>Status:</b> ${b.payment_status}</p>
+                            <p class="mt-2"><b>Customer:</b> ${b.customer_name} (${b.customer_phone})</p>
+                            <p><b>Driver:</b> ${b.driver_name} (${b.driver_phone})</p>
+                            <p><b>Taxi:</b> ${b.taxi_model}</p>
+                        </div>
+                    `,
+                        )
+                        .join("")}
+                </div>
+            `;
+            }
+        </script>
+    </body>
+</html>
