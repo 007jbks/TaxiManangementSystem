@@ -145,5 +145,3 @@ Payments from customers are recorded for each booking.
 
 ## **7. Conclusion**
 This SRS document outlines the core requirements and functionality of the **Taxi Management System**, designed as a Mini-DBMS project to demonstrate efficient management of taxis, drivers, bookings, and payments using MySQL CRUD operations.
-
-
