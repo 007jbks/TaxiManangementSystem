@@ -9,9 +9,11 @@ load_dotenv()
 def get_connection():
     return mysql.connector.connect(
         host=os.environ["s_host"],
+        port=os.environ["s_port"],
         user=os.environ["s_user"],
         password=os.environ["s_pass"],
-        database="defaultdb",
+        database="taxi_db",
+        ssl_ca="ca.pem",
     )
 
 
@@ -39,3 +41,17 @@ def fetch_query(query, params=None):
     cursor.close()
     db.close()
     return result
+
+
+def call_procedure(proc_name, params=None):
+    db = get_connection()
+    cursor = db.cursor(dictionary=True)
+    cursor.callproc(proc_name, params or [])
+
+    results = []
+    for result in cursor.stored_results():
+        results = result.fetchall()
+
+    cursor.close()
+    db.close()
+    return results
