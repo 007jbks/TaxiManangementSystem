@@ -12,7 +12,7 @@ def get_connection():
         port=os.environ["s_port"],
         user=os.environ["s_user"],
         password=os.environ["s_pass"],
-        database="taxi_db",
+        database="taxi",
         ssl_ca="ca.pem",
     )
 
